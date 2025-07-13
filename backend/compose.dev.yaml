@@ -1,0 +1,14 @@
+services:
+  db:
+    extends:
+      file: compose.yaml
+      service: db
+    ports:
+      - "5432:5432"
+
+volumes:
+  april-pos-db:
+
+secrets:
+  april-pos-db-password:
+    environment: DB_PASSWORD

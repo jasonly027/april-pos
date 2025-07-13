@@ -1,0 +1,27 @@
+services:
+  app:
+    image: jasonly027/april-pos-backend
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    depends_on:
+      - db
+    secrets:
+      - april-pos-db-password
+  db:
+    image: postgres:17.5-alpine3.22
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/april-pos-db-password
+    volumes:
+      - april-pos-db:/var/lib/postgresql/data
+    secrets:
+      - april-pos-db-password
+
+volumes:
+  april-pos-db:
+
+secrets:
+  april-pos-db-password:
+    external: true
