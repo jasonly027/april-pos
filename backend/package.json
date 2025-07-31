@@ -7,6 +7,7 @@
     "dev:app": "tsx --watch --env-file .env src/index.ts",
     "dev:db-up": "docker compose -p april-dev-db -f compose.dev.yaml --env-file .env up -d",
     "dev:db-down": "docker compose -p april-dev-db down",
+    "migrate": "set \"DATABASE_URL=postgres://postgres:password@localhost/april\" && npx node-pg-migrate -j ts",
     "build": "tsc",
     "type-check": "tsc --noEmit"
   },
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "express": "^5.1.0",
-    "postgres": "^3.4.7"
+    "node-pg-migrate": "^9.0.0-alpha.0",
+    "pg": "^8.16.3"
   }
 }
