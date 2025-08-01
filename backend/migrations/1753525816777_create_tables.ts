@@ -130,7 +130,7 @@ export function up(pgm: MigrationBuilder): void {
     "employee_roles_audit_delete_if_null_fks",
     {
       when: "AFTER",
-      operation: ["UPDATE"],
+      operation: "UPDATE",
       function: "employee_roles_audit_delete_if_null_fks_fn",
       level: "ROW",
     },
@@ -185,11 +185,6 @@ export function up(pgm: MigrationBuilder): void {
     description: {
       type: "TEXT",
     },
-    price: {
-      type: "numeric(15,6)",
-      notNull: true,
-      check: "price >= 0",
-    },
     sku: {
       type: "TEXT",
       notNull: true,
@@ -206,6 +201,27 @@ export function up(pgm: MigrationBuilder): void {
       default: true,
     },
     created_at: "created_at",
+  });
+
+  pgm.createTable("product_prices", {
+    id: "id",
+    product_id: {
+      type: "INT",
+      notNull: true,
+      references: "products(id)",
+      onDelete: "CASCADE",
+    },
+    price: {
+      type: "numeric(15,6)",
+      notNull: true,
+      check: "price >= 0",
+    },
+    changed_on: "created_at",
+    changed_by: {
+      type: "INT",
+      references: "employees(id)",
+      onDelete: "SET NULL",
+    },
   });
 
   pgm.createTable("categories", {
@@ -239,10 +255,14 @@ export function up(pgm: MigrationBuilder): void {
     name: {
       type: "TEXT",
       notNull: true,
+      unique: true,
+    },
+    request_code: {
+      type: "TEXT",
+      unique: true,
     },
     product_id: {
       type: "INT",
-      notNull: true,
       references: "products(id)",
       onDelete: "CASCADE",
     },
@@ -272,6 +292,171 @@ export function up(pgm: MigrationBuilder): void {
       type: "BOOLEAN",
       notNull: true,
       default: true,
+    },
+  });
+
+  pgm.createFunction(
+    "prevent_update",
+    [],
+    {
+      returns: "trigger",
+      language: "plpgsql",
+    },
+    `
+    BEGIN
+      RAISE EXCEPTION 'Updates are not allowed on this table';
+    END;
+    `,
+  );
+
+  pgm.createTrigger("promotions", "promotions_prevent_update", {
+    when: "BEFORE",
+    operation: "UPDATE",
+    function: "prevent_update",
+    level: "ROW",
+  });
+
+  pgm.createTable("rewards_setting", {
+    id: "id",
+    points_per_dollar: {
+      type: "NUMERIC(10,4)",
+      notNull: true,
+    },
+    dollar_per_points: {
+      type: "NUMERIC(10,4)",
+      notNull: true,
+    },
+    changed_on: "created_at",
+  });
+
+  pgm.createDomain("email", "TEXT", {
+    check:
+      "value ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'",
+  });
+
+  pgm.createTable("customers", {
+    id: "id",
+    first_name: {
+      type: "TEXT",
+      notNull: true,
+    },
+    last_name: {
+      type: "TEXT",
+      notNull: true,
+    },
+    email: {
+      type: "EMAIL",
+      notNull: true,
+      unique: true,
+    },
+    points: {
+      type: "INT",
+      notNull: true,
+      default: 0,
+    },
+  });
+
+  pgm.createTable("purchases", {
+    id: "id",
+    customer_id: {
+      type: "INT",
+      references: "customers(id)",
+      onDelete: "SET NULL",
+    },
+    purchase_date: "created_at",
+    points_redeemed: {
+      type: "INT",
+      notNull: true,
+      default: 0,
+    },
+  });
+
+  pgm.createTable("purchase_items", {
+    id: "id",
+    purchase_id: {
+      type: "INT",
+      notNull: true,
+      references: "purchases(id)",
+      onDelete: "CASCADE",
+    },
+    product_id: {
+      type: "INT",
+      references: "products(id)",
+      onDelete: "SET NULL",
+    },
+    units: {
+      type: "INT",
+      notNull: true,
+      check: "units > 0",
+    },
+    price_per_unit: {
+      type: "NUMERIC(15,6)",
+      notNull: true,
+      check: "price_per_unit >= 0",
+    },
+    points_redeemed: {
+      type: "INT",
+      notNull: true,
+      default: 0,
+      check: "points_redeemed >= 0",
+    },
+  });
+
+  pgm.createTable("purchase_item_promotions", {
+    id: "id",
+    purchase_item_id: {
+      type: "INT",
+      notNull: true,
+      references: "purchase_items(id)",
+      onDelete: "CASCADE",
+    },
+    promotion_id: {
+      type: "INT",
+      notNull: true,
+      references: "promotions(id)",
+      onDelete: "SET NULL",
+    },
+    units: {
+      type: "INT",
+      notNull: true,
+      check: "units > 0",
+    },
+    discount_per_unit: {
+      type: "NUMERIC(15,6)",
+      notNull: true,
+      check: "discount_per_unit > 0",
+    },
+  });
+
+  pgm.createTable("refunds", {
+    id: "id",
+    purchase_id: {
+      type: "INT",
+      notNull: true,
+      references: "purchases(id)",
+      onDelete: "CASCADE",
+    },
+    refund_date: "created_at",
+  });
+
+  pgm.createTable("refund_items", {
+    id: "id",
+    refund_id: {
+      type: "INT",
+      notNull: true,
+      references: "refunds(id)",
+      onDelete: "CASCADE",
+    },
+    purchase_item_id: {
+      type: "INT",
+      notNull: true,
+      references: "purchase_items(id)",
+      onDelete: "CASCADE",
+    },
+    units: {
+      type: "INT",
+      notNull: true,
+      check: "units > 0",
     },
   });
 }
